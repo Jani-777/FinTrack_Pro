@@ -1,29 +1,47 @@
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
+        <div class="flex justify-between h-24">
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
                         <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <span class="text-md font-bold text-indigo-600 hidden md:block">
+                            {{ \App\Models\SystemSetting::where('setting_name', 'App_Name')->first()->setting_value ?? 'FinTrack' }}
+                        </span>
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    
+                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ auth()->user()->isAdmin() ? __('Admin Control Panel') : __('My Dashboard') }}
-                    </x-nav-link>
-
-                    <x-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
-                        {{ auth()->user()->isAdmin() ? __('All System Records') : __('My Finances') }}
+                        {{ __('Dashboard') }}
                     </x-nav-link>
 
                     @if(auth()->user()->isAdmin())
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                            {{ __('All System Records') }}
+                        </x-nav-link>
+
                         <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
                             {{ __('System Categories') }}
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('admin.settings')" :active="request()->routeIs('admin.settings')">
+                            {{ __('System Settings') }}
+                        </x-nav-link>
+                    @else
+                        <x-nav-link :href="route('wallets.index')" :active="request()->routeIs('wallets.*')">
+                            {{ __('Wallets') }}
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
+                            {{ __('My Transactions') }}
+                        </x-nav-link>
+                        
+                        <x-nav-link :href="route('budgets.index')" :active="request()->routeIs('budgets.*')">
+                            {{ __('My Budgets') }}
                         </x-nav-link>
                     @endif
                 </div>

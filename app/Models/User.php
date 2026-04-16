@@ -56,4 +56,16 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function wallets()
+    {
+        // A user has many wallets [cite: 63]
+        return $this->hasMany(Wallet::class, 'user_id');
+    }
+
+    public function budgets()
+    {
+        // A user can set multiple budgets [cite: 63]
+        return $this->hasMany(Budget::class, 'user_id');
+    }
 }

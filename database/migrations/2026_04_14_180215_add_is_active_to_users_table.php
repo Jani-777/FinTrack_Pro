@@ -9,12 +9,9 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
-    {
-        Schema::create('categories', function (Blueprint $table) {
-            $table->id();
-            $table->string('name'); // e.g., 'Income', 'Expense', 'Investment', 'Refund'
-            $table->timestamps();
+    public function up() {
+        Schema::table('users', function ($table) {
+            $table->boolean('is_active')->default(true)->after('password');
         });
     }
 
@@ -23,6 +20,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('categories');
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
     }
 };

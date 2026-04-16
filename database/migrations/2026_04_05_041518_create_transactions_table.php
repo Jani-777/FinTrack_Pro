@@ -9,18 +9,18 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
-{
-    Schema::create('transactions', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-        $table->string('title');
-        $table->decimal('amount', 10, 2);
-        $table->string('type');
-        $table->date('date');
-        $table->timestamps();
-    });
-}
+    public function up(): void
+    {
+        Schema::create('transactions', function (Blueprint $table) {
+            $table->id('transaction_id');
+            $table->foreignId('wallet_id')->constrained('wallets', 'wallet_id')->onDelete('cascade'); // FK to Wallets
+            $table->foreignId('category_id')->constrained('categories', 'category_id')->onDelete('cascade'); // FK to Categories
+            $table->decimal('amount', 15, 2);
+            $table->date('transaction_date');
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.
