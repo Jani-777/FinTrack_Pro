@@ -2,12 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
-    protected $primaryKey = 'transaction_id'; // Matches your PDF [cite: 101]
-    protected $fillable = ['wallet_id', 'category_id', 'amount', 'transaction_date', 'description'];
+    use HasFactory;
+
+    protected $primaryKey = 'transaction_id'; // Ensure this matches your PK name
+
+    // ADD 'user_id' TO THIS ARRAY:
+    protected $fillable = [
+        'user_id', 
+        'wallet_id', 
+        'category_id', 
+        'amount', 
+        'description', 
+        'transaction_date'
+    ];
 
     // Link back to the Wallet [cite: 64]
     public function wallet() {

@@ -32,6 +32,7 @@
                             {{ __('System Settings') }}
                         </x-nav-link>
                     @else
+
                         <x-nav-link :href="route('wallets.index')" :active="request()->routeIs('wallets.*')">
                             {{ __('Wallets') }}
                         </x-nav-link>
@@ -42,6 +43,10 @@
                         
                         <x-nav-link :href="route('budgets.index')" :active="request()->routeIs('budgets.*')">
                             {{ __('My Budgets') }}
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
+                            {{ __('Categories') }}
                         </x-nav-link>
                     @endif
                 </div>
@@ -99,9 +104,38 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            @if(auth()->user()->isAdmin())
+                <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                    {{ __('All System Records') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
+                    {{ __('System Categories') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('admin.settings')" :active="request()->routeIs('admin.settings')">
+                    {{ __('System Settings') }}
+                </x-responsive-nav-link>
+            @else
+                <x-responsive-nav-link :href="route('wallets.index')" :active="request()->routeIs('wallets.*')">
+                    {{ __('Wallets') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.*')">
+                    {{ __('My Transactions') }}
+                </x-responsive-nav-link>
+                
+                <x-responsive-nav-link :href="route('budgets.index')" :active="request()->routeIs('budgets.*')">
+                    {{ __('My Budgets') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
+                    {{ __('Categories') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
-        <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">
                 <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
@@ -113,10 +147,8 @@
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
 
-                <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-
                     <x-responsive-nav-link :href="route('logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">

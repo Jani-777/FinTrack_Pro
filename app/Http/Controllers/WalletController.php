@@ -11,7 +11,13 @@ class WalletController extends Controller
     // READ (List only the user's wallets)
     public function index()
     {
-        $wallets = Auth::user()->wallets; // Assumes a 'wallets' relationship in User Model
+        // Load wallets with their latest 10 transactions and the category for each
+        $wallets = Auth::user()->wallets()
+            ->with(['transactions' => function($query) {
+                $query->latest()->limit(10); // Limit to 10 for performance
+            }, 'transactions.category'])
+            ->get();
+
         return view('wallets.index', compact('wallets'));
     }
 
@@ -26,7 +32,7 @@ class WalletController extends Controller
     {
         $request->validate([
             'wallet_name' => 'required|string|max:255',
-            'current_balance' => 'required|numeric',
+            'current_balance' => 'required|numeric|min:0',
         ]);
 
         Wallet::create([
@@ -55,7 +61,7 @@ class WalletController extends Controller
 
         $request->validate([
             'wallet_name' => 'required|string|max:255',
-            'current_balance' => 'required|numeric',
+            'current_balance' => 'required|numeric|min:0',
         ]);
 
         $wallet->update($request->all());

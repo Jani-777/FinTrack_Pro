@@ -3,14 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 
 class BudgetController extends Controller
 {
     public function index()
     {
-        $budgets = auth()->user()->budgets()->with('category')->get();
-        $categories = \App\Models\Category::all();
+        $user = auth()->user();
+        $budgets = $user->budgets()->with('category')->get();
+        
+        $categories = \App\Models\Category::whereNull('user_id')
+            ->orWhere('user_id', $user->id)
+            ->get();
+
+        foreach ($budgets as $budget) {
+            $budget->total_spent = Transaction::where('user_id', $user->id)
+                ->where('category_id', $budget->category_id)
+                ->whereMonth('transaction_date', \Carbon\Carbon::parse($budget->month_year)->month)
+                ->whereYear('transaction_date', \Carbon\Carbon::parse($budget->month_year)->year)
+                ->sum('amount');
+        }
+
         return view('budgets.index', compact('budgets', 'categories'));
     }
 
@@ -18,14 +32,16 @@ class BudgetController extends Controller
     {
         $request->validate([
             'category_id' => 'required|exists:categories,category_id',
-            'amount_limit' => 'required|numeric|min:1',
+            'amount_limit' => 'required|numeric|min:0.01',
+            'description' => 'nullable|string|max:255', // Added
         ]);
 
         \App\Models\Budget::create([
             'user_id' => auth()->id(),
             'category_id' => $request->category_id,
             'amount_limit' => $request->amount_limit,
-            'month_year' => now()->startOfMonth(), // Sets budget for current month
+            'description' => $request->description, // Added
+            'month_year' => now()->startOfMonth(),
         ]);
 
         return back()->with('success', 'Monthly budget set!');
@@ -35,7 +51,10 @@ class BudgetController extends Controller
     {
         if ($budget->user_id !== auth()->id()) abort(403);
         
-        $categories = \App\Models\Category::all();
+        $categories = \App\Models\Category::whereNull('user_id')
+            ->orWhere('user_id', auth()->id())
+            ->get();
+            
         return view('budgets.edit', compact('budget', 'categories'));
     }
 
@@ -45,23 +64,19 @@ class BudgetController extends Controller
 
         $request->validate([
             'category_id' => 'required|exists:categories,category_id',
-            'amount_limit' => 'required|numeric|min:0',
+            'amount_limit' => 'required|numeric|min:0.01',
+            'description' => 'nullable|string|max:255', // Added
         ]);
 
-        $budget->update($request->only(['category_id', 'amount_limit']));
+        $budget->update($request->only(['category_id', 'amount_limit', 'description']));
 
         return redirect()->route('budgets.index')->with('success', 'Budget updated!');
     }
 
-    public function destroy(\App\Models\Budget $budget)
+    public function destroy(Budget $budget)
     {
-        // Security check
-        if ($budget->user_id !== auth()->id()) {
-            abort(403);
-        }
-
+        if ($budget->user_id !== auth()->id()) abort(403);
         $budget->delete();
-
         return redirect()->route('budgets.index')->with('success', 'Budget removed!');
     }
 }

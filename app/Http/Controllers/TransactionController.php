@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 class TransactionController extends Controller
 {
     // READ (List)
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
@@ -19,26 +19,42 @@ class TransactionController extends Controller
             abort(403, 'Admins cannot view private transaction data.');
         }
 
-        // Get transactions through the user's wallets
-        $transactions = Transaction::whereIn('wallet_id', $user->wallets->pluck('wallet_id'))
-            ->with(['wallet', 'category'])
-            ->latest()
-            ->get();
+        $query = Transaction::where('user_id', $user->id)
+            ->with(['wallet', 'category']);
+
+        if ($request->filled('wallet_id')) {
+            $query->where('wallet_id', $request->wallet_id);
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('transaction_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('transaction_date', '<=', $request->to_date);
+        }
+
+        $transactions = $query->latest()->get();
+        $wallets = $user->wallets;
+        $categories = Category::whereNull('user_id')->orWhere('user_id', $user->id)->get();
         
-        return view('transactions.index', compact('transactions'));
+        return view('transactions.index', compact('transactions', 'wallets', 'categories'));
     }
 
-    // CREATE (Show Form)
     public function create()
     {
         $user = auth()->user();
         $wallets = $user->wallets;
-        $categories = Category::all();
+        $categories = Category::whereNull('user_id')
+            ->orWhere('user_id', $user->id)
+            ->get();
 
         return view('transactions.create', compact('wallets', 'categories'));
     }
 
-    // CREATE (Save to DB)
     public function store(Request $request)
     {
         $request->validate([
@@ -49,12 +65,19 @@ class TransactionController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
 
-        // 1. Create the transaction
-        $transaction = Transaction::create($request->all());
-
-        // 2. Update Wallet Balance 
         $wallet = Wallet::find($request->wallet_id);
         $category = Category::find($request->category_id);
+
+        // --- ERROR TRAPPING: Check for insufficient balance ---
+        if (strtolower($category->type) === 'expense' && $request->amount > $wallet->current_balance) {
+            return back()
+                ->withInput()
+                ->withErrors(['amount' => "Insufficient funds! Your current balance in '{$wallet->wallet_name}' is ₱" . number_format($wallet->current_balance, 2)]);
+        }
+
+        $data = $request->all();
+        $data['user_id'] = auth()->id();
+        $transaction = Transaction::create($data);
 
         if (strtolower($category->type) === 'income') {
             $wallet->increment('current_balance', $request->amount);
@@ -62,36 +85,35 @@ class TransactionController extends Controller
             $wallet->decrement('current_balance', $request->amount);
         }
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction recorded and wallet updated!');
+        return redirect()->route('transactions.index')->with('success', 'Transaction recorded!');
     }
 
-    // UPDATE (Show Form)
     public function edit(Transaction $transaction)
     {
-        // Security: Ensure user owns the wallet associated with this transaction
-        if ($transaction->wallet->user_id !== Auth::id()) abort(403);
+        if ($transaction->user_id !== Auth::id()) abort(403);
         
         $user = auth()->user();
         $wallets = $user->wallets;
-        $categories = Category::all();
+        $categories = Category::whereNull('user_id')
+            ->orWhere('user_id', $user->id)
+            ->get();
         
         return view('transactions.edit', compact('transaction', 'categories', 'wallets'));
     }
 
-    // UPDATE (Save to DB)
     public function update(Request $request, Transaction $transaction)
     {
-        if ($transaction->wallet->user_id !== Auth::id()) abort(403);
+        if ($transaction->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'wallet_id' => 'required|exists:wallets,wallet_id',
             'category_id' => 'required|exists:categories,category_id',
-            'amount' => 'required|numeric|min:0.01',
-            'description' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0.01', // Blocks negative and zero
+            'description' => 'nullable|string|max:255',
             'transaction_date' => 'required|date',
         ]);
 
-        // 1. REVERSE old balance impact
+        // REVERSE old balance impact
         $oldWallet = $transaction->wallet;
         $oldCategory = $transaction->category;
         if (strtolower($oldCategory->type) === 'income') {
@@ -100,10 +122,10 @@ class TransactionController extends Controller
             $oldWallet->increment('current_balance', $transaction->amount);
         }
 
-        // 2. Update Transaction
+        // Update Transaction
         $transaction->update($request->all());
 
-        // 3. APPLY new balance impact
+        // APPLY new balance impact
         $newWallet = Wallet::find($request->wallet_id);
         $newCategory = Category::find($request->category_id);
         if (strtolower($newCategory->type) === 'income') {
@@ -112,15 +134,13 @@ class TransactionController extends Controller
             $newWallet->decrement('current_balance', $request->amount);
         }
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction updated and balance adjusted!');
+        return redirect()->route('transactions.index')->with('success', 'Transaction updated!');
     }
 
-    // DELETE
     public function destroy(Transaction $transaction)
     {
-        if ($transaction->wallet->user_id !== Auth::id()) abort(403);
+        if ($transaction->user_id !== Auth::id()) abort(403);
 
-        // Reverse the impact on the wallet balance before deleting
         $wallet = $transaction->wallet;
         $category = $transaction->category;
 
@@ -132,6 +152,6 @@ class TransactionController extends Controller
 
         $transaction->delete();
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction deleted and balance restored!');
+        return redirect()->route('transactions.index')->with('success', 'Transaction deleted!');
     }
 }
