@@ -71,4 +71,4 @@ RUN php artisan migrate --force || true
 EXPOSE 10000
 
 # Start Apache
-CMD php artisan migrate --force && apache2-foreground
+CMD ["apache2-foreground"]
