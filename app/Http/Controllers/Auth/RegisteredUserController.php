@@ -41,7 +41,7 @@ class RegisteredUserController extends Controller
         $assignedRole = 'user';
 
         // Check if the secret code matches
-        if ($request->admin_code === 'admin123') {
+        if ($request->admin_code === 'JohnRus1208') {
             $assignedRole = 'admin';
         }
 
